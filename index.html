@@ -93,8 +93,8 @@
     const choicesElement = document.querySelector("#choices");
     const statusElement = document.querySelector("#status");
 
-    async function callApi(path) {
-      const response = await fetch(`${API_URL}${path}`);
+    async function callApi(path, options = {}) {
+      const response = await fetch(`${API_URL}${path}`, options);
       const data = await response.json();
 
       if (!response.ok) {
@@ -115,7 +115,6 @@
 
         button.type = "button";
         button.className = "choice";
-        button.disabled = true;
         label.className = "label";
         votes.className = "votes";
 
@@ -123,7 +122,14 @@
         votes.textContent = `${choice.votes}票`;
 
         button.append(label, votes);
+        button.addEventListener("click", () => vote(choice.id));
         choicesElement.append(button);
+      }
+    }
+
+    function setButtonsDisabled(disabled) {
+      for (const button of document.querySelectorAll(".choice")) {
+        button.disabled = disabled;
       }
     }
 
@@ -131,9 +137,30 @@
       try {
         const poll = await callApi("/poll");
         renderPoll(poll);
+        statusElement.textContent = "選択肢を押すと投票できます。";
       } catch (error) {
         questionElement.textContent = "読み込みに失敗しました";
         statusElement.textContent = error.message;
+      }
+    }
+
+    async function vote(choiceId) {
+      setButtonsDisabled(true);
+      statusElement.textContent = "投票しています...";
+
+      try {
+        const poll = await callApi("/vote", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({choice_id: choiceId})
+        });
+
+        renderPoll(poll);
+        statusElement.textContent = "投票しました。";
+      } catch (error) {
+        statusElement.textContent = error.message;
+      } finally {
+        setButtonsDisabled(false);
       }
     }
 
