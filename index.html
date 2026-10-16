@@ -29,14 +29,6 @@
       box-shadow: 0 20px 60px rgb(44 55 100 / 16%);
     }
 
-    .eyebrow {
-      margin: 0 0 10px;
-      color: #665ee8;
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-    }
-
     h1 {
       margin: 0;
       font-size: clamp(1.8rem, 7vw, 2.6rem);
@@ -77,22 +69,75 @@
       color: #665ee8;
       font-variant-numeric: tabular-nums;
     }
+
+    #status {
+      min-height: 1.5em;
+      margin: 20px 0 0;
+      color: #59627a;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
   <main>
-    <h1>犬派ですか？猫派ですか？</h1>
+    <h1 id="question">読み込み中です...</h1>
     <p class="lead">あなたの好きなほうを選んでください。</p>
-    <div id="choices">
-      <button class="choice" type="button" disabled>
-        <span class="label">犬派</span>
-        <span class="votes">0票</span>
-      </button>
-      <button class="choice" type="button" disabled>
-        <span class="label">猫派</span>
-        <span class="votes">0票</span>
-      </button>
-    </div>
+    <div id="choices"></div>
+    <p id="status" role="status"></p>
   </main>
+
+  <script>
+    const API_URL = "https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com";
+
+    const questionElement = document.querySelector("#question");
+    const choicesElement = document.querySelector("#choices");
+    const statusElement = document.querySelector("#status");
+
+    async function callApi(path) {
+      const response = await fetch(`${API_URL}${path}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "APIの呼び出しに失敗しました");
+      }
+
+      return data;
+    }
+
+    function renderPoll(poll) {
+      questionElement.textContent = poll.question;
+      choicesElement.replaceChildren();
+
+      for (const choice of poll.choices) {
+        const button = document.createElement("button");
+        const label = document.createElement("span");
+        const votes = document.createElement("span");
+
+        button.type = "button";
+        button.className = "choice";
+        button.disabled = true;
+        label.className = "label";
+        votes.className = "votes";
+
+        label.textContent = choice.label;
+        votes.textContent = `${choice.votes}票`;
+
+        button.append(label, votes);
+        choicesElement.append(button);
+      }
+    }
+
+    async function loadPoll() {
+      try {
+        const poll = await callApi("/poll");
+        renderPoll(poll);
+      } catch (error) {
+        questionElement.textContent = "読み込みに失敗しました";
+        statusElement.textContent = error.message;
+      }
+    }
+
+    loadPoll();
+  </script>
 </body>
 </html>
